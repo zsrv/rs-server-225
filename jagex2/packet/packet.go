@@ -124,7 +124,7 @@ func CheckCRC(src []uint8, offset int, length int, expected uint32) bool {
 	return checksum == expected
 }
 
-func AllocPacket(typ int) Packet {
+func AllocPacket(typ int) *Packet {
 	var p *Packet = nil
 
 	if typ == 0 && cacheMinCount > 0 {
@@ -150,24 +150,24 @@ func AllocPacket(typ int) Packet {
 	if p != nil {
 		p.Pos = 0
 		p.BitPos = 0
-		return *p
+		return p
 	}
 
 	switch typ {
 	case 0:
-		return Packet{Buf: make([]byte, 0, 100)}
+		return &Packet{Buf: make([]byte, 0, 100)}
 	case 1:
-		return Packet{Buf: make([]byte, 0, 5000)}
+		return &Packet{Buf: make([]byte, 0, 5000)}
 	case 2:
-		return Packet{Buf: make([]byte, 0, 30000)}
+		return &Packet{Buf: make([]byte, 0, 30000)}
 	case 3:
-		return Packet{Buf: make([]byte, 0, 100000)}
+		return &Packet{Buf: make([]byte, 0, 100000)}
 	case 4:
-		return Packet{Buf: make([]byte, 0, 500000)}
+		return &Packet{Buf: make([]byte, 0, 500000)}
 	case 5:
-		return Packet{Buf: make([]byte, 0, 2000000)}
+		return &Packet{Buf: make([]byte, 0, 2000000)}
 	default:
-		return Packet{Buf: make([]byte, 0, typ)}
+		return &Packet{Buf: make([]byte, 0, typ)}
 	}
 
 }
