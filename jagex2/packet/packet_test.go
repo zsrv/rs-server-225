@@ -8,9 +8,9 @@ import (
 
 func TestGetCRC(t *testing.T) {
 	type args struct {
-		length int
-		offset int
 		src    []uint8
+		offset int
+		length int
 	}
 	tests := []struct {
 		name string
@@ -20,11 +20,20 @@ func TestGetCRC(t *testing.T) {
 		{
 			name: "valid",
 			args: args{
-				length: 8,
-				offset: 0,
 				src:    []byte{1, 2, 3, 4, 5, 6, 7, 8},
+				offset: 0,
+				length: 8,
 			},
 			want: 1070237893,
+		},
+		{
+			name: "valid b",
+			args: args{
+				src:    []byte("123456789"),
+				offset: 0,
+				length: len("123456789"),
+			},
+			want: -873187034 & 0xFFFFFFFF,
 		},
 	}
 	for _, tt := range tests {
@@ -48,7 +57,16 @@ func TestCheckCRC(t *testing.T) {
 		args args
 		want bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			args: args{
+				src:      []uint8("123456789"),
+				offset:   0,
+				length:   len("123456789"),
+				expected: -873187034 & 0xFFFFFFFF,
+			},
+			want: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,7 +124,16 @@ func TestPacket_G1B(t *testing.T) {
 		want   int8
 	}{
 		{
-			name: "valid",
+			name: "normal",
+			fields: fields{
+				Buf:      []byte{81, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
+				Pos:      0,
+				lastRead: 0,
+			},
+			want: 81,
+		},
+		{
+			name: "overflow",
 			fields: fields{
 				Buf:      []byte{150, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
 				Pos:      0,
@@ -141,11 +168,16 @@ func TestPacket_G2(t *testing.T) {
 		want   uint16
 	}{
 		{
-			name: "valid",
+			name: "unsigned a",
 			fields: fields{
-				Buf:      []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12},
-				Pos:      0,
-				lastRead: 0,
+				Buf: []byte{0xFF, 0xFF},
+			},
+			want: 0xFFFF,
+		},
+		{
+			name: "unsigned b",
+			fields: fields{
+				Buf: []byte{0x01, 0x02},
 			},
 			want: 0x0102,
 		},
@@ -210,7 +242,20 @@ func TestPacket_IG2(t *testing.T) {
 		fields fields
 		want   uint16
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{255, 255},
+			},
+			want: 0xFFFF,
+		},
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{32, 254},
+			},
+			want: 0xFE20,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -377,7 +422,24 @@ func TestPacket_GBool(t *testing.T) {
 		fields fields
 		want   bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "true",
+			fields: fields{
+				Buf:      []byte{1},
+				Pos:      0,
+				lastRead: 0,
+			},
+			want: true,
+		},
+		{
+			name: "false",
+			fields: fields{
+				Buf:      []byte{0},
+				Pos:      0,
+				lastRead: 0,
+			},
+			want: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -393,7 +455,6 @@ func TestPacket_GBool(t *testing.T) {
 	}
 }
 
-// TODO: fix
 func TestPacket_GJStr(t *testing.T) {
 	type fields struct {
 		Buf      []byte
@@ -428,6 +489,9 @@ func TestPacket_GJStr(t *testing.T) {
 				Pos:      15,
 				lastRead: -1,
 			},
+			args: args{
+				terminator: 0,
+			},
 			want: "password",
 		},
 	}
@@ -456,7 +520,13 @@ func TestPacket_GJStrLF(t *testing.T) {
 		fields fields
 		want   string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10},
+			},
+			want: "Hello World!",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -483,7 +553,13 @@ func TestPacket_GJStrNUL(t *testing.T) {
 		fields fields
 		want   string
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 0},
+			},
+			want: "Hello World!",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1351,8 +1427,24 @@ func TestPacket_PBool(t *testing.T) {
 		name   string
 		fields fields
 		args   args
+		want   []byte
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "true",
+			fields: fields{},
+			args: args{
+				value: true,
+			},
+			want: []byte{0x1},
+		},
+		{
+			name:   "false",
+			fields: fields{},
+			args: args{
+				value: false,
+			},
+			want: []byte{0x0},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1432,7 +1524,15 @@ func TestPacket_PJStrLF(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 10},
+			},
+			args: args{
+				str: "Hello World!",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1460,7 +1560,15 @@ func TestPacket_PJStrNUL(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		// TODO: Add test cases.
+		{
+			name: "valid",
+			fields: fields{
+				Buf: []byte{72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33, 0},
+			},
+			args: args{
+				str: "Hello World!",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1701,7 +1809,24 @@ func TestPacket_PSmartS(t *testing.T) {
 		fields fields
 		args   args
 	}{
-		// TODO: Add test cases.
+		{
+			name: "signed a",
+			fields: fields{
+				Buf: []byte{77},
+			},
+			args: args{
+				value: 13,
+			},
+		},
+		{
+			name: "signed b",
+			fields: fields{
+				Buf: []byte{51},
+			},
+			args: args{
+				value: -13,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
