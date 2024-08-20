@@ -11,20 +11,6 @@ import (
 	"path/filepath"
 )
 
-//type Packet struct {
-//	Buf []byte
-//	Pos int
-//}
-
-// TODO: Add Packet constructors
-
-//func New(size int) *Packet {
-//
-//}
-
-///////////////////////////////////
-
-// static vars taken out of Packet
 var cacheMinCount int
 var cacheMidCount int
 var cacheMaxCount int
@@ -39,91 +25,21 @@ var cacheBig list.List
 var cacheHuge list.List
 var cacheUnimaginable list.List
 
-func (p *Packet) Release() {
-	// TODO: make Release() for PacketBit, see if I can super() for this one
-	p.Pos = 0
-	//p.bitPos = 0
-
-	if len(p.Buf) == 100 && cacheMinCount < 1000 {
-		cacheMin.PushBack(p)
-		cacheMinCount++
-	} else if len(p.Buf) == 5000 && cacheMidCount < 250 {
-		cacheMid.PushBack(p)
-		cacheMidCount++
-	} else if len(p.Buf) == 30000 && cacheMaxCount < 50 {
-		cacheMax.PushBack(p)
-		cacheMaxCount++
-	} else if len(p.Buf) == 100000 && cacheBigCount < 10 {
-		cacheBig.PushBack(p)
-		cacheBigCount++
-	} else if len(p.Buf) == 500000 && cacheHugeCount < 5 {
-		cacheHuge.PushBack(p)
-		cacheHugeCount++
-	} else if len(p.Buf) == 2000000 && cacheUnimaginableCount < 2 {
-		cacheUnimaginable.PushBack(p)
-		cacheUnimaginableCount++
-	}
-}
-
-func Load(path string, seekToEnd bool) (*Packet, error) {
-	file, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	p := &Packet{Buf: file}
-
-	if seekToEnd {
-		p.Pos = len(p.Buf)
-	}
-	return p, nil
-}
-
-func (p *Packet) Save(filePath string, length int, start int) error {
-	// TODO: make Save() for PacketBit, see if I can super() for this one
-
-	dir := filepath.Dir(filePath)
-	_, err := os.Stat(dir)
-	if os.IsNotExist(err) {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-
-	f, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-	_, err = w.Write(p.Buf[start : start+length])
-	if err != nil {
-		return err
-	}
-	w.Flush()
-
-	return nil
-}
-
-//////////////////////////////////
-
-// Readers
-
-// GetCRC calculate checksum
+// GetCRC returns the checksum of length bytes in src
+// beginning at offset.
 func GetCRC(src []uint8, offset int, length int) uint32 {
 	return crc32.ChecksumIEEE(src[offset : offset+length])
 }
 
-// CheckCRC
-// TODO: should GetCRC and this be returning int64 or something?
+// CheckCRC returns true if the checksum of length bytes in src
+// beginning at offset matches expected.
 func CheckCRC(src []uint8, offset int, length int, expected uint32) bool {
+	// TODO: should GetCRC and this be returning int64 or something?
 	checksum := GetCRC(src, offset, length)
 	return checksum == expected
 }
 
+// TODO: needs test
 func AllocPacket(typ int) *Packet {
 	var p *Packet = nil
 
@@ -171,6 +87,76 @@ func AllocPacket(typ int) *Packet {
 	}
 
 }
+
+func Load(path string, seekToEnd bool) (*Packet, error) {
+	file, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Packet{Buf: file}
+
+	if seekToEnd {
+		p.Pos = len(p.Buf)
+	}
+	return p, nil
+}
+
+// TODO: test
+func (p *Packet) Release() {
+	p.Pos = 0
+	p.BitPos = 0
+
+	if len(p.Buf) == 100 && cacheMinCount < 1000 {
+		cacheMin.PushBack(p)
+		cacheMinCount++
+	} else if len(p.Buf) == 5000 && cacheMidCount < 250 {
+		cacheMid.PushBack(p)
+		cacheMidCount++
+	} else if len(p.Buf) == 30000 && cacheMaxCount < 50 {
+		cacheMax.PushBack(p)
+		cacheMaxCount++
+	} else if len(p.Buf) == 100000 && cacheBigCount < 10 {
+		cacheBig.PushBack(p)
+		cacheBigCount++
+	} else if len(p.Buf) == 500000 && cacheHugeCount < 5 {
+		cacheHuge.PushBack(p)
+		cacheHugeCount++
+	} else if len(p.Buf) == 2000000 && cacheUnimaginableCount < 2 {
+		cacheUnimaginable.PushBack(p)
+		cacheUnimaginableCount++
+	}
+}
+
+// TODO: test
+func (p *Packet) Save(filePath string, length int, start int) error {
+	dir := filepath.Dir(filePath)
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	f, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	_, err = w.Write(p.Buf[start : start+length])
+	if err != nil {
+		return err
+	}
+	w.Flush()
+
+	return nil
+}
+
+// Readers
 
 // G1 gets 1 unsigned byte.
 // TODO: error isn't returned if there are no bytes to read sometimes. handle this for all getters somehow
@@ -312,10 +298,6 @@ func (p *Packet) GSmartS() int32 {
 		return int32(p.G1() - 64)
 	}
 }
-
-// BITS
-
-////////////////////////////
 
 // Writers
 
@@ -501,7 +483,7 @@ func (p *Packet) PSmartS(value int32) {
 	}
 }
 
-/////////////////////////
+// RSA
 
 // RSAEnc RSA-encrypts the buffer contents.
 func (p *Packet) RSAEnc(modulus *big.Int, exponent *big.Int) {
