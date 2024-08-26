@@ -254,3 +254,15 @@ func Test_filter(t *testing.T) {
 		})
 	}
 }
+
+func Benchmark_filter(b *testing.B) {
+	wf, err := LoadWordFilter(filepath.Join(projectpath.Root, "data", "pack"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		filter(wf, "badword [dot] com")
+	}
+}
